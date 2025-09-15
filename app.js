@@ -49,6 +49,10 @@ io.on("connection", (socket) => {
   });
 });
 
+app.get("/", (req, res) => {
+  res.send("hello web socket");
+})
+
 server.listen(port, () => {
   console.log(`🚀 Server running on http://localhost:${port}`);
 });
