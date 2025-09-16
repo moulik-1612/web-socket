@@ -12,6 +12,14 @@ const db = mysql.createConnection({
   database: "pubup",
 });
 
+
+// const db = mysql.createConnection({
+//   host: "localhost",
+//   user: "root",   // XAMPP default
+//   password: "",   // XAMPP default is empty
+//   database: "chat_app",
+// });
+
 db.connect((err) => {
   if (err) {
     console.error("❌ MySQL connection failed:", err);
@@ -51,17 +59,6 @@ app.use(express.json());
 
 // ----------------- REST APIs -----------------
 
-// Add user
-app.post("/users", (req, res) => {
-  const { username } = req.body;
-  if (!username) return res.status(400).json({ error: "username required" });
-
-  db.query("INSERT INTO users (username) VALUES (?)", [username], (err, result) => {
-    if (err) return res.status(500).json({ error: err });
-    res.json({ id: result.insertId, username });
-  });
-});
-
 // Get all users
 app.get("/users", (req, res) => {
   db.query("SELECT * FROM myapp_user", (err, rows) => {
@@ -69,6 +66,10 @@ app.get("/users", (req, res) => {
     res.json(rows);
   });
 });
+
+app.get("/", (req, res) => {
+  res.send("welcome to socket server");
+})
 
 // Get messages between 2 users
 app.get("/messages/:from/:to", (req, res) => {
@@ -84,29 +85,29 @@ app.get("/messages/:from/:to", (req, res) => {
 });
 
 // Post new message
-app.post("/messages", (req, res) => {
-  const { from_id, to_id, message } = req.body;
+// app.post("/messages", (req, res) => {
+//   const { from_id, to_id, message } = req.body;
 
-  if (!from_id || !to_id || !message) {
-    return res.status(400).json({ error: "from_id, to_id and message are required" });
-  }
+//   if (!from_id || !to_id || !message) {
+//     return res.status(400).json({ error: "from_id, to_id and message are required" });
+//   }
 
-  db.query(
-    "INSERT INTO messages (from_id, to_id, message) VALUES (?, ?, ?)",
-    [from_id, to_id, message],
-    (err, result) => {
-      if (err) return res.status(500).json({ error: err });
+//   db.query(
+//     "INSERT INTO messages (from_id, to_id, message) VALUES (?, ?, ?)",
+//     [from_id, to_id, message],
+//     (err, result) => {
+//       if (err) return res.status(500).json({ error: err });
 
-      res.json({
-        id: result.insertId,
-        from_id,
-        to_id,
-        message,
-        created_at: new Date()
-      });
-    }
-  );
-});
+//       res.json({
+//         id: result.insertId,
+//         from_id,
+//         to_id,
+//         message,
+//         created_at: new Date()
+//       });
+//     }
+//   );
+// });
 
 
 // ----------------- WebSocket -----------------
@@ -115,9 +116,16 @@ const onlineUsers = new Map();
 io.use((socket, next) => {
   const userId = socket.handshake.auth?.userId;
   if (!userId) return next(new Error("no user id"));
-  socket.userId = userId;
-  next();
+
+  db.query("SELECT id FROM myapp_user WHERE id = ?", [userId], (err, results) => {
+    if (err) return next(new Error("DB error"));
+    if (results.length === 0) return next(new Error("Invalid user"));
+
+    socket.userId = userId;
+    next();
+  });
 });
+
 
 io.on("connection", (socket) => {
   console.log(`✅ User connected: ${socket.userId}`);
