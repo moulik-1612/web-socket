@@ -15,14 +15,6 @@ const db = mysql.createConnection({
   database: "pubup",
 });
 
-
-// const db = mysql.createConnection({
-//   host: "localhost",
-//   user: "root",   // XAMPP default
-//   password: "",   // XAMPP default is empty
-//   database: "chat_app",
-// });
-
 db.connect((err) => {
   if (err) {
     console.error("❌ MySQL connection failed:", err);
