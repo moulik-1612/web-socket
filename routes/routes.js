@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { upload } from "../middleware/multer.js";
 import sendAllUser from "../controller/user controller/userController.js";
-import { showChatHistory, saveMsgWithImg, saveMsg } from "../controller/message controller/msgController.js";
+import { showChatHistory, saveMsgWithImg, saveMsg, editMessage, deleteMessage } from "../controller/message controller/msgController.js";
 import multer from "multer";
 
 const router = Router();
@@ -32,5 +32,9 @@ router.post(
 );
 
 router.post("/send-message", saveMsg );
+
+router.patch("/messages/edit", editMessage);
+
+router.patch("/messages/delete", deleteMessage);
 
 export default router;

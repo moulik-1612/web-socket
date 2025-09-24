@@ -48,7 +48,7 @@ io.use((socket, next) => {
   const userId = socket.handshake.auth?.userId;
   if (!userId) return next(new Error("no user id"));
 
-  db.query("SELECT id FROM myapp_user WHERE id = ?", [userId], (err, results) => {
+  db.query("SELECT user_id FROM myapp_user WHERE user_id = ?", [userId], (err, results) => {
     if (err) return next(new Error("DB error"));
     if (results.length === 0) return next(new Error("Invalid user"));
 

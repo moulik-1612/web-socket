@@ -1,19 +1,19 @@
 import mysql from "mysql2";
 
 // ----------------- MySQL Connection -----------------
-// const db = mysql.createConnection({
-//   host: "localhost",
-//   user: "komal_pubup",   // XAMPP default
-//   password: "p+MOy1A(Rc^O#l{I",   // XAMPP default is empty
-//   database: "pubup",
-// });
-
 const db = mysql.createConnection({
   host: "localhost",
-  user: "root",   // XAMPP default
-  password: "",   // XAMPP default is empty
-  database: "chat_app",
+  user: "komal_pubup",   // XAMPP default
+  password: "p+MOy1A(Rc^O#l{I",   // XAMPP default is empty
+  database: "pubup",
 });
+
+// const db = mysql.createConnection({
+//   host: "localhost",
+//   user: "root",   // XAMPP default
+//   password: "",   // XAMPP default is empty
+//   database: "chat_app",
+// });
 
 db.connect((err) => {
   if (err) {
@@ -23,13 +23,14 @@ db.connect((err) => {
   console.log("✅ MySQL connected");
 
   // Auto-create tables if not exist
-  db.query(
-    `CREATE TABLE IF NOT EXISTS myapp_user (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      username VARCHAR(100) NOT NULL,
-      last_seen DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`
-  );
+db.query(
+  `CREATE TABLE IF NOT EXISTS myapp_user (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(50) UNIQUE NOT NULL,
+    username VARCHAR(100) NOT NULL,
+    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`
+);
 
 db.query(
   `CREATE TABLE IF NOT EXISTS messages (

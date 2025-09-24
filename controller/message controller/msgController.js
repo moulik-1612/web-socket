@@ -34,3 +34,35 @@ export const saveMsg = (req, res) => {
   res.json({message: msg, reply_to});
 
 }
+
+// Edit a message
+export const editMessage = (req, res) => {
+  const { messageId, newMessage } = req.body;
+
+  db.query(
+    `UPDATE messages 
+     SET message = ?, is_edited = 1, updated_at = CURRENT_TIMESTAMP 
+     WHERE id = ?`,
+    [newMessage, messageId],
+    (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true, message: "Message updated" });
+    }
+  );
+};
+
+// Soft delete a message
+export const deleteMessage = (req, res) => {
+  const { messageId } = req.body;
+
+  db.query(
+    `UPDATE messages 
+     SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP 
+     WHERE id = ?`,
+    [messageId],
+    (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true, message: "Message deleted" });
+    }
+  );
+};
