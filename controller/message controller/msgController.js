@@ -1,5 +1,4 @@
 import db from "../../config/db.js";
-import { onlineUsers } from "../../app.js";
 
 export const showChatHistory = (req, res) => {
   const { from, to } = req.params;
@@ -22,64 +21,16 @@ export const saveMsgWithImg =   (req, res) => {
 
     const fileUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
-    // Save both msg and image (null if not provided)
-    db.query(
-      "INSERT INTO messages (from_id, to_id, message, image) VALUES (?, ?, ?, ?)",
-      [from_id, to_id, msg || null, fileUrl || null],
-      (err, result) => {
-        if (err) return res.status(500).json({ error: err });
-
-        const savedMsg = {
-          id: result.insertId,
-          from_id,
-          to_id,
-          message: msg || null,
-          image: fileUrl || null,
-          created_at: new Date(),
-        };
-
-        // Emit via socket
-        const targetSocket = onlineUsers.get(parseInt(to_id));
-        if (targetSocket) {
-          io.to(targetSocket).emit("recive-msg", savedMsg);
-        }
-
-        res.json(savedMsg);
-      }
-    );
+    res.json({message: msg, image: fileUrl});
   }
 
 export const saveMsg = (req, res) => {
-  const { from_id, to_id, msg } = req.body;
+  const { from_id, to_id, msg, reply_to } = req.body;
 
   if (!from_id || !to_id) {
     return res.status(400).json({ error: "from_id and to_id are required" });
   }
 
-  db.query(
-    "INSERT INTO messages (from_id, to_id, message, image) VALUES (?, ?, ?, ?)",
-    [from_id, to_id, msg || null, null],
-    (err, result) => {
-      if (err) {
-        console.error("Database error:", err);
-        return res.status(500).json({ error: "Database error" });
-      }
+  res.json({message: msg, reply_to});
 
-      const savedMsg = {
-        id: result.insertId,
-        from_id,
-        to_id,
-        message: msg || null,
-        image: null,
-        created_at: new Date(),
-      };
-
-      const targetSocket = onlineUsers.get(parseInt(to_id));
-      if (targetSocket) {
-        io.to(targetSocket).emit("recive-msg", savedMsg);
-      }
-
-      res.json(savedMsg);
-    }
-  );
 }
