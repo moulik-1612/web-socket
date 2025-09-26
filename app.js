@@ -68,7 +68,7 @@ io.on("connection", (socket) => {
   socket.broadcast.emit("user-online", { userId: socket.userId });
 
   // 3) send recent last_seen for this user (optional: read from DB)
-  db.query("SELECT last_seen FROM myapp_user WHERE id = ?", [socket.userId], (err, res) => {
+  db.query("SELECT last_seen FROM myapp_user WHERE user_id = ?", [socket.userId], (err, res) => {
     if (!err && res && res[0]) {
       io.to(socket.id).emit("my-last-seen", { last_seen: res[0].last_seen });
     }
@@ -81,71 +81,89 @@ io.on("connection", (socket) => {
    * Save message to DB, emit to recipient (if online) and ack sender with saved message
    */
   socket.on("private-msg", (payload) => {
-    const fromId = socket.userId;
-    const toId = String(payload.to);
-    const msg = payload.msg || null;
-    const image = payload.image || null;
-    const reply_to = payload.reply_to || null;
+  const fromUserId = socket.userId;   // string user_id from auth
+  const toUserId = payload.to;        // string user_id from payload
+  const msg = payload.msg || null;
+  const image = payload.image || null;
+  const reply_to = payload.reply_to || null;
 
-    // rate / flood detection: more than 5 messages in 10 seconds
-    const recentCount = recordAndCountRecent(fromId, 10);
-    if (recentCount > 5) {
-      // notify sender about being too fast — client can show UI to choose reply option
-      io.to(socket.id).emit("too-many-msgs", {
-        message: "You're sending messages very quickly. You may want to reply to a particular message.",
-        count: recentCount,
-      });
-      // note: we do NOT block save — adjust if you want to block
-    }
-
-    // Save message to DB
-    const sql =
-      "INSERT INTO messages (`from_id`, `to_id`, `message`, `image`, `reply_to`) VALUES (?, ?, ?, ?, ?)";
-    db.query(sql, [fromId, toId, msg, image, reply_to], (err, result) => {
-      if (err) {
-        console.error("DB save error", err);
-        io.to(socket.id).emit("send-error", { error: "message save failed" });
+  // --- lookup sender ---
+  db.query(
+    "SELECT id FROM myapp_user WHERE user_id = ?",
+    [fromUserId],
+    (err, fromRes) => {
+      if (err || fromRes.length === 0) {
+        console.error("invalid from_id", fromUserId, err);
+        io.to(socket.id).emit("send-error", { error: "invalid from_id" });
         return;
       }
-      
-      const insertedId = result.insertId;
-      // fetch saved message row to send consistently
-      db.query("SELECT * FROM messages WHERE id = ?", [insertedId], (err2, rows) => {
-        if (err2) {
-          console.error("DB fetch after insert failed", err2);
-          return;
-        }
-        const saved = rows[0];
+      const fromId = fromRes[0].id;
 
-        // emit to recipient if online
-        const targetSocketId = onlineUsers.get(toId);
-        if (targetSocketId) {
-          io.to(targetSocketId).emit("recive-msg", {
-            id: saved.id,
-            from_id: saved.from_id,
-            to_id: saved.to_id,
-            message: saved.message,
-            image: saved.image,
-            created_at: saved.created_at,
-            seen: saved.seen,
-            reply_to: saved.reply_to,
+      // --- lookup recipient ---
+      db.query(
+        "SELECT id FROM myapp_user WHERE user_id = ?",
+        [toUserId],
+        (err2, toRes) => {
+          if (err2 || toRes.length === 0) {
+            console.error("invalid to_id", toUserId, err2);
+            io.to(socket.id).emit("send-error", { error: "invalid to_id" });
+            return;
+          }
+          const toId = toRes[0].id;
+
+          // --- insert message with numeric ids ---
+          const sql =
+            "INSERT INTO messages (`from_id`, `to_id`, `message`, `image`, `reply_to`) VALUES (?, ?, ?, ?, ?)";
+          db.query(sql, [fromId, toId, msg, image, reply_to], (err3, result) => {
+            if (err3) {
+              console.error("DB save error", err3);
+              io.to(socket.id).emit("send-error", { error: "message save failed" });
+              return;
+            }
+
+            const insertedId = result.insertId;
+
+            // --- fetch saved message row ---
+            db.query("SELECT * FROM messages WHERE id = ?", [insertedId], (err4, rows) => {
+              if (err4 || rows.length === 0) {
+                console.error("DB fetch after insert failed", err4);
+                return;
+              }
+              const saved = rows[0];
+
+              // --- emit to recipient if online ---
+              const targetSocketId = onlineUsers.get(toUserId); // use user_id string for map
+              if (targetSocketId) {
+                io.to(targetSocketId).emit("recive-msg", {
+                  id: saved.id,
+                  from_id: saved.from_id,
+                  to_id: saved.to_id,
+                  message: saved.message,
+                  image: saved.image,
+                  created_at: saved.created_at,
+                  seen: saved.seen,
+                  reply_to: saved.reply_to,
+                });
+              }
+
+              // --- ack sender with saved message ---
+              io.to(socket.id).emit("message-sent", {
+                id: saved.id,
+                from_id: saved.from_id,
+                to_id: saved.to_id,
+                message: saved.message,
+                image: saved.image,
+                created_at: saved.created_at,
+                seen: saved.seen,
+                reply_to: saved.reply_to,
+              });
+            });
           });
         }
-
-        // ack the sender with the saved message (so client can add id + timestamp)
-        io.to(socket.id).emit("message-sent", {
-          id: saved.id,
-          from_id: saved.from_id,
-          to_id: saved.to_id,
-          message: saved.message,
-          image: saved.image,
-          created_at: saved.created_at,
-          seen: saved.seen,
-          reply_to: saved.reply_to,
-        });
-      });
-    });
-  });
+      );
+    }
+  );
+});
 
   /**
    * typing
@@ -196,7 +214,7 @@ io.on("connection", (socket) => {
    * payload: { userId }
    */
   socket.on("get-last-seen", ({ userId }) => {
-    db.query("SELECT last_seen FROM myapp_user WHERE id = ?", [userId], (err, rows) => {
+    db.query("SELECT last_seen FROM myapp_user WHERE user_id = ?", [userId], (err, rows) => {
       if (err || !rows || !rows[0]) {
         io.to(socket.id).emit("last-seen", { userId, last_seen: null });
       } else {
@@ -213,7 +231,7 @@ io.on("connection", (socket) => {
     // broadcast offline event with last_seen timestamp (now)
     const now = new Date();
     // update DB last_seen
-    db.query("UPDATE myapp_user SET last_seen = ? WHERE id = ?", [now, socket.userId], (err) => {
+    db.query("UPDATE myapp_user SET last_seen = ? WHERE user_id = ?", [now, socket.userId], (err) => {
       if (err) console.warn("Failed to update last_seen", err);
       // broadcast offline to others
       socket.broadcast.emit("user-offline", { userId: socket.userId, last_seen: now });

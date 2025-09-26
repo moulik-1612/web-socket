@@ -31,7 +31,7 @@ export const saveMsg = (req, res) => {
     return res.status(400).json({ error: "from_id and to_id are required" });
   }
 
-  res.json({message: msg, reply_to});
+  res.json({message: msg, reply_to: reply_to});
 
 }
 
