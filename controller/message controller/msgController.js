@@ -46,7 +46,7 @@ export const editMessage = (req, res) => {
     [newMessage, messageId],
     (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
-      res.json({ success: true, message: "Message updated" });
+      res.status(200).json({ success: true, message: "Message updated" });
     }
   );
 };
@@ -62,7 +62,7 @@ export const deleteMessage = (req, res) => {
     [messageId],
     (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
-      res.json({ success: true, message: "Message deleted" });
+      res.status(200).json({ success: true, message: "Message deleted" });
     }
   );
 };

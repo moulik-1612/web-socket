@@ -114,7 +114,7 @@ io.on("connection", (socket) => {
           // --- insert message with numeric ids ---
           const sql =
             "INSERT INTO messages (`from_id`, `to_id`, `message`, `image`, `reply_to`) VALUES (?, ?, ?, ?, ?)";
-          db.query(sql, [fromId, toId, msg, image, reply_to], (err3, result) => {
+          db.query(sql, [fromUserId, toUserId, msg, image, reply_to], (err3, result) => {
             if (err3) {
               console.error("DB save error", err3);
               io.to(socket.id).emit("send-error", { error: "message save failed" });

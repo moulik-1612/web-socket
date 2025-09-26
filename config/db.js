@@ -32,7 +32,7 @@ const runQuery = (query, description) => {
 const createUserTableQuery = `
 CREATE TABLE IF NOT EXISTS myapp_user (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id VARCHAR(255) NOT NULL,
+  user_id VARCHAR(100) NOT NULL,
   name VARCHAR(255),
   email VARCHAR(255),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -45,8 +45,8 @@ runQuery(createUserTableQuery, "create myapp_user table");
 const createMessagesTableQuery = `
 CREATE TABLE IF NOT EXISTS messages (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  from_id BIGINT,
-  to_id BIGINT,
+  from_id VARCHAR(100),
+  to_id VARCHAR(100),
   message TEXT,
   image TEXT,
   reply_to INT DEFAULT NULL,
@@ -56,8 +56,8 @@ CREATE TABLE IF NOT EXISTS messages (
   updated_at TIMESTAMP NULL DEFAULT NULL,
   deleted_at TIMESTAMP NULL DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (from_id) REFERENCES myapp_user(id) ON DELETE CASCADE,
-  FOREIGN KEY (to_id) REFERENCES myapp_user(id) ON DELETE CASCADE,
+  FOREIGN KEY (from_id) REFERENCES myapp_user(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (to_id) REFERENCES myapp_user(user_id) ON DELETE CASCADE,
   FOREIGN KEY (reply_to) REFERENCES messages(id) ON DELETE SET NULL
 );
 `;
